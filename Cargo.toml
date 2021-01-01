@@ -6,5 +6,35 @@ edition = "2018"
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
+env_logger = "0.8.2"
+fluvio = "0.3.2"
+log = "0.4.11"
+mimalloc = { version = "0.1.22", default-features = false }
+openssl = { version = "0.10.32", features = ["vendored"] }
 serde = { version = "1.0.118", features = ["derive"] }
 serde_json = "1.0.61"
+
+[dependencies.tokio]
+version = "0.2"
+default-features = false
+features = [
+    "rt-core",
+    "rt-util",
+    "io-util",
+    "io-std",
+    "time",
+    "macros",
+    "stream",
+    "signal",
+    "dns",
+    "dns",
+]
+
+[dependencies.lettre]
+version = "0.10.0-alpha.4"
+default-features = false
+features = [
+    "builder",
+    "smtp-transport",
+    "tokio02-native-tls",
+]
