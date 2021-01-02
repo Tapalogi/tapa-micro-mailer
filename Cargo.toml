@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
 env_logger = "0.8.2"
+futures = "0.3.0"
 hostname = "0.3.1"
 log = "0.4.11"
 mimalloc = { version = "0.1.22", default-features = false }
