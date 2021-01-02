@@ -1,6 +1,7 @@
 use env_logger::builder as log_builder;
 use regex::Regex;
 use std::env::{set_var, var};
+use uuid::Uuid;
 
 const REGEX_VALID_EMAIL: &str =
     r"^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})";
@@ -15,6 +16,10 @@ pub fn get_hostname() -> String {
         Err(_) => "none".into(),
         Ok(instance_hostname) => instance_hostname.to_str().unwrap().into(),
     }
+}
+
+pub fn get_new_uuid_v4() -> Uuid {
+    Uuid::new_v4()
 }
 
 pub fn init_logger() {
