@@ -1,4 +1,4 @@
-use super::{IOError, IOErrorKind, IOResult};
+use super::{debug, IOError, IOErrorKind, IOResult};
 use std::env::var;
 
 pub struct MailerConfig {
@@ -82,24 +82,31 @@ impl MailerConfig {
         if let Ok(session_timeout_ms) = var("KAFKA_SESSION_TIMEOUT_MS") {
             if let Ok(parsed_session_timeout_ms) = session_timeout_ms.parse::<u32>() {
                 kafka_session_timeout_ms = parsed_session_timeout_ms;
+                debug!("KAFKA_SESSION_TIMEOUT_MS overridden with {}", parsed_session_timeout_ms);
             }
         }
 
         if let Ok(heartbeat_interval_ms) = var("KAFKA_HEARTBEAT_INTERVAL_MS") {
             if let Ok(parsed_heartbeat_interval_ms) = heartbeat_interval_ms.parse::<u32>() {
                 kafka_heartbeat_interval_ms = parsed_heartbeat_interval_ms;
+                debug!(
+                    "KAFKA_HEARTBEAT_INTERVAL_MS overridden with {}",
+                    parsed_heartbeat_interval_ms
+                );
             }
         }
 
         if let Ok(produce_timeout_ms) = var("KAFKA_PRODUCE_TIMEOUT_MS") {
             if let Ok(parsed_produce_timeout_ms) = produce_timeout_ms.parse::<u32>() {
                 kafka_produce_timeout_ms = parsed_produce_timeout_ms;
+                debug!("KAFKA_PRODUCE_TIMEOUT_MS overridden with {}", parsed_produce_timeout_ms);
             }
         }
 
         if let Ok(use_ssl) = var("SMTP_USE_SSL") {
             if let Ok(parsed_use_ssl) = use_ssl.parse::<bool>() {
                 smtp_use_ssl = parsed_use_ssl;
+                debug!("SMTP_USE_SSL overridden with {}", parsed_use_ssl);
             }
         }
 

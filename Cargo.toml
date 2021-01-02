@@ -21,18 +21,7 @@ rdkafka = { version = "0.24.0", features = ["ssl-vendored", "libz-static", "gssa
 [dependencies.tokio]
 version = "0.2"
 default-features = false
-features = [
-    "rt-core",
-    "rt-util",
-    "io-util",
-    "io-std",
-    "time",
-    "macros",
-    "stream",
-    "signal",
-    "dns",
-    "dns",
-]
+features = [ "full" ]
 
 [dependencies.lettre]
 version = "0.10.0-alpha.4"
