@@ -4,9 +4,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub enum MessageFailType {
-    NetworkError(String),
+    #[serde(rename = "REJECTED_BY_SERVER")]
     RejectedByServer(String),
+    #[serde(rename = "BAD_DRAFT")]
     BadDraft(String),
+    #[serde(rename = "BAD_CREDENTIALS")]
     BadCredentials,
 }
 
