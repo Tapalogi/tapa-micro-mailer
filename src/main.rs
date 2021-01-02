@@ -5,7 +5,7 @@ mod config;
 mod messages;
 mod utils;
 
-use std::io::Result as IOResult;
+pub use std::io::{Error as IOError, ErrorKind as IOErrorKind, Result as IOResult};
 
 #[tokio::main]
 async fn main() -> IOResult<()> {
