@@ -1,7 +1,7 @@
 MAKEFLAGS	+= --silent
 PROGRAM		:= tapa-micro-mailer
 
-.PHONY : debug clean check clippy fmt upgrade test all
+.PHONY : clean clippy fmt upgrade test all
 
 all: | prepare debug
 

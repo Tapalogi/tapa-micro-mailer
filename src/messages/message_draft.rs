@@ -16,7 +16,9 @@ pub enum MessageDraftBodyType {
 pub struct MessageDraft {
     pub id: Uuid,
     pub email_to: String,
+    pub email_to_name: Option<String>,
     pub email_from: String,
+    pub email_from_name: Option<String>,
     pub subject: String,
     pub body_type: MessageDraftBodyType,
     pub body: String,
