@@ -1,7 +1,7 @@
 use super::{debug, IOError, IOErrorKind, IOResult};
 use std::env::var;
 
-pub struct MailerConfig {
+pub struct KafkaConfig {
     pub kafka_brokers: String,
     pub kafka_consumer_group_id: String,
     pub kafka_topic_draft: String,
@@ -10,26 +10,18 @@ pub struct MailerConfig {
     pub kafka_session_timeout_ms: u32,
     pub kafka_heartbeat_interval_ms: u32,
     pub kafka_produce_timeout_ms: u32,
-    pub smtp_use_ssl: bool,
-    pub smtp_host: String,
-    pub smtp_user: String,
-    pub smtp_pass: String,
 }
 
-impl MailerConfig {
+impl KafkaConfig {
     pub fn load_from_env() -> IOResult<Self> {
         let kafka_brokers;
         let kafka_consumer_group_id;
         let kafka_topic_draft;
         let kafka_topic_fail;
         let kafka_topic_sent;
-        let smtp_host;
-        let smtp_user;
-        let smtp_pass;
         let mut kafka_session_timeout_ms = 5000;
         let mut kafka_heartbeat_interval_ms = 1000;
         let mut kafka_produce_timeout_ms = 5000;
-        let mut smtp_use_ssl = false;
 
         if let Ok(brokers) = var("KAFKA_BROKERS") {
             kafka_brokers = brokers;
@@ -61,24 +53,6 @@ impl MailerConfig {
             return Err(IOError::new(IOErrorKind::InvalidData, "KAFKA_TOPIC_SENT not set!"));
         }
 
-        if let Ok(host) = var("SMTP_HOST") {
-            smtp_host = host;
-        } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_HOST not set!"));
-        }
-
-        if let Ok(user) = var("SMTP_USER") {
-            smtp_user = user;
-        } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_USER not set!"));
-        }
-
-        if let Ok(pass) = var("SMTP_PASS") {
-            smtp_pass = pass;
-        } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_PASS not set!"));
-        }
-
         if let Ok(session_timeout_ms) = var("KAFKA_SESSION_TIMEOUT_MS") {
             if let Ok(parsed_session_timeout_ms) = session_timeout_ms.parse::<u32>() {
                 kafka_session_timeout_ms = parsed_session_timeout_ms;
@@ -103,13 +77,6 @@ impl MailerConfig {
             }
         }
 
-        if let Ok(use_ssl) = var("SMTP_USE_SSL") {
-            if let Ok(parsed_use_ssl) = use_ssl.parse::<bool>() {
-                smtp_use_ssl = parsed_use_ssl;
-                debug!("SMTP_USE_SSL overridden with {}", parsed_use_ssl);
-            }
-        }
-
         Ok(Self {
             kafka_brokers,
             kafka_consumer_group_id,
@@ -119,10 +86,108 @@ impl MailerConfig {
             kafka_session_timeout_ms,
             kafka_heartbeat_interval_ms,
             kafka_produce_timeout_ms,
-            smtp_use_ssl,
-            smtp_host,
-            smtp_user,
-            smtp_pass,
         })
+    }
+}
+
+pub struct SmtpConfig {
+    pub use_starttls: bool,
+    pub host: String,
+    pub user: String,
+    pub pass: String,
+    pub max_per_second: Option<usize>,
+    pub max_per_minute: Option<usize>,
+    pub max_per_hour: Option<usize>,
+    pub max_per_day: Option<usize>,
+}
+
+impl SmtpConfig {
+    pub fn load_from_env() -> IOResult<Self> {
+        let host;
+        let user;
+        let pass;
+        let mut use_starttls = false;
+        let mut max_per_second = None;
+        let mut max_per_minute = None;
+        let mut max_per_hour = None;
+        let mut max_per_day = None;
+
+        if let Ok(smtp_host) = var("SMTP_HOST") {
+            host = smtp_host;
+        } else {
+            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_HOST not set!"));
+        }
+
+        if let Ok(smtp_user) = var("SMTP_USER") {
+            user = smtp_user;
+        } else {
+            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_USER not set!"));
+        }
+
+        if let Ok(smtp_pass) = var("SMTP_PASS") {
+            pass = smtp_pass;
+        } else {
+            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_PASS not set!"));
+        }
+
+        if let Ok(smtp_use_starttls) = var("SMTP_USE_STARTTLS") {
+            if let Ok(parsed_use_starttls) = smtp_use_starttls.parse::<bool>() {
+                use_starttls = parsed_use_starttls;
+                debug!("SMTP_USE_STARTTLS overridden with {}", parsed_use_starttls);
+            }
+        }
+
+        if let Ok(smtp_max_per_second) = var("SMTP_MAX_PER_SECOND") {
+            if let Ok(parsed_max_per_second) = smtp_max_per_second.parse::<usize>() {
+                max_per_second = Some(parsed_max_per_second);
+                debug!("SMTP_MAX_PER_SECOND overridden with {}", parsed_max_per_second);
+            }
+        }
+
+        if let Ok(smtp_max_per_minute) = var("SMTP_MAX_PER_MINUTE") {
+            if let Ok(parsed_max_per_minute) = smtp_max_per_minute.parse::<usize>() {
+                max_per_minute = Some(parsed_max_per_minute);
+                debug!("SMTP_MAX_PER_MINUTE overridden with {}", parsed_max_per_minute);
+            }
+        }
+
+        if let Ok(smtp_max_per_hour) = var("SMTP_MAX_PER_HOUR") {
+            if let Ok(parsed_max_per_hour) = smtp_max_per_hour.parse::<usize>() {
+                max_per_hour = Some(parsed_max_per_hour);
+                debug!("SMTP_MAX_PER_HOUR overridden with {}", parsed_max_per_hour);
+            }
+        }
+
+        if let Ok(smtp_max_per_day) = var("SMTP_MAX_PER_DAY") {
+            if let Ok(parsed_max_per_day) = smtp_max_per_day.parse::<usize>() {
+                max_per_day = Some(parsed_max_per_day);
+                debug!("SMTP_MAX_PER_DAY overridden with {}", parsed_max_per_day);
+            }
+        }
+
+        Ok(Self {
+            max_per_second,
+            max_per_minute,
+            max_per_hour,
+            max_per_day,
+            use_starttls,
+            host,
+            user,
+            pass,
+        })
+    }
+}
+
+pub struct MailerConfig {
+    pub kafka_config: KafkaConfig,
+    pub smtp_config: SmtpConfig,
+}
+
+impl MailerConfig {
+    pub fn load_from_env() -> IOResult<Self> {
+        let kafka_config = KafkaConfig::load_from_env()?;
+        let smtp_config = SmtpConfig::load_from_env()?;
+
+        Ok(Self { kafka_config, smtp_config })
     }
 }

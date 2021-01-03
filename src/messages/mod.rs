@@ -7,8 +7,3 @@ pub use message_draft::{MessageDraft, MessageDraftBodyType};
 pub use message_fail::{MessageFail, MessageFailType};
 pub use message_sent::MessageSent;
 pub use message_traits::IJsonSerializable;
-
-pub enum EmailSendingResult {
-    Fail(MessageFail),
-    Sent(MessageSent),
-}

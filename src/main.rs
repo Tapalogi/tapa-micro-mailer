@@ -2,16 +2,17 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod config;
+mod mailer;
 mod messages;
 mod utils;
 
 pub use log::{debug, error, info, log, warn};
 pub use std::io::{Error as IOError, ErrorKind as IOErrorKind, Result as IOResult};
 
-use config::MailerConfig;
+use config::{KafkaConfig, MailerConfig, SmtpConfig};
 use futures::stream::FuturesUnordered;
 use futures::{StreamExt, TryStreamExt};
-use messages::{EmailSendingResult, MessageDraft};
+use messages::MessageDraft;
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::Consumer;
@@ -28,11 +29,11 @@ const HEARTBEAT_INTERVAL_MS: &str = "heartbeat.interval.ms";
 const SESSION_TIMEOUT_MS: &str = "session.timeout.ms";
 const ENABLE_AUTO_COMMIT: &str = "enable.auto.commit";
 
-fn create_event_producer(runtime_config: &MailerConfig) -> IOResult<FutureProducer> {
+fn create_event_producer(kafka_config: &KafkaConfig) -> IOResult<FutureProducer> {
     let producer_creation_result: KafkaResult<FutureProducer> = ClientConfig::new()
-        .set(BOOTSTRAP_SERVERS, &runtime_config.kafka_brokers)
-        .set(MESSAGE_TIMEOUT_MS, &runtime_config.kafka_produce_timeout_ms.to_string())
-        .set(HEARTBEAT_INTERVAL_MS, &runtime_config.kafka_heartbeat_interval_ms.to_string())
+        .set(BOOTSTRAP_SERVERS, &kafka_config.kafka_brokers)
+        .set(MESSAGE_TIMEOUT_MS, &kafka_config.kafka_produce_timeout_ms.to_string())
+        .set(HEARTBEAT_INTERVAL_MS, &kafka_config.kafka_heartbeat_interval_ms.to_string())
         .create();
 
     match producer_creation_result {
@@ -44,12 +45,12 @@ fn create_event_producer(runtime_config: &MailerConfig) -> IOResult<FutureProduc
     }
 }
 
-fn create_event_consumer(runtime_config: &MailerConfig) -> IOResult<StreamConsumer> {
+fn create_event_consumer(kafka_config: &KafkaConfig) -> IOResult<StreamConsumer> {
     let consumer_creation_result: KafkaResult<StreamConsumer> = ClientConfig::new()
-        .set(GROUP_ID, &runtime_config.kafka_consumer_group_id)
-        .set(BOOTSTRAP_SERVERS, &runtime_config.kafka_brokers)
-        .set(SESSION_TIMEOUT_MS, &runtime_config.kafka_session_timeout_ms.to_string())
-        .set(HEARTBEAT_INTERVAL_MS, &runtime_config.kafka_heartbeat_interval_ms.to_string())
+        .set(GROUP_ID, &kafka_config.kafka_consumer_group_id)
+        .set(BOOTSTRAP_SERVERS, &kafka_config.kafka_brokers)
+        .set(SESSION_TIMEOUT_MS, &kafka_config.kafka_session_timeout_ms.to_string())
+        .set(HEARTBEAT_INTERVAL_MS, &kafka_config.kafka_heartbeat_interval_ms.to_string())
         .set(ENABLE_AUTO_COMMIT, "false")
         .create();
 
@@ -62,7 +63,7 @@ fn create_event_consumer(runtime_config: &MailerConfig) -> IOResult<StreamConsum
 
     let consumer = consumer_creation_result.unwrap();
 
-    if let Err(consume_error) = consumer.subscribe(&[&runtime_config.kafka_topic_draft]) {
+    if let Err(consume_error) = consumer.subscribe(&[&kafka_config.kafka_topic_draft]) {
         return Err(IOError::new(
             IOErrorKind::Other,
             format!("Kafka Consume Error! {}", consume_error.to_string()),
@@ -70,10 +71,6 @@ fn create_event_consumer(runtime_config: &MailerConfig) -> IOResult<StreamConsum
     }
 
     Ok(consumer)
-}
-
-async fn do_send_mail(draft: &MessageDraft) -> IOResult<EmailSendingResult> {
-    todo!("Implement send mail!");
 }
 
 async fn mailer_event_loop(
@@ -91,8 +88,8 @@ async fn main() -> IOResult<()> {
 
     let runtime_config = MailerConfig::load_from_env()?;
     let service_hostname = get_hostname();
-    let kafka_producer = create_event_producer(&runtime_config)?;
-    let kafka_consumer = create_event_consumer(&runtime_config)?;
+    let kafka_producer = create_event_producer(&runtime_config.kafka_config)?;
+    let kafka_consumer = create_event_consumer(&runtime_config.kafka_config)?;
 
     mailer_event_loop(runtime_config, service_hostname, kafka_producer, kafka_consumer).await
 }

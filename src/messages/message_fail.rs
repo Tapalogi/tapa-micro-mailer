@@ -8,6 +8,8 @@ pub enum MessageFailType {
     RejectedByServer(String),
     #[serde(rename = "BAD_DRAFT")]
     BadDraft(String),
+    #[serde(rename = "QUOTA_EXHAUSTED")]
+    QuotaExhausted,
     #[serde(rename = "BAD_CREDENTIALS")]
     BadCredentials,
 }
