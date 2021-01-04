@@ -5,14 +5,18 @@ use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct MessageSent {
-    pub origin_offset: i64,
+    pub origin_offset: Option<i64>,
+    pub service_instance_name: Option<String>,
     pub draft_id: Uuid,
-    pub service_instance_name: String,
     pub timestamp: DateTime<FixedOffset>,
 }
 
 impl MessageSent {
-    pub fn new(origin_offset: i64, draft_id: Uuid, service_instance_name: &str) -> Self {
+    pub fn new(
+        origin_offset: Option<i64>,
+        service_instance_name: Option<String>,
+        draft_id: Uuid,
+    ) -> Self {
         Self {
             origin_offset,
             draft_id,
