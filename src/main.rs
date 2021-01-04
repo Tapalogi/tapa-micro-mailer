@@ -20,7 +20,9 @@ use rdkafka::error::KafkaResult;
 use rdkafka::message::{BorrowedMessage, OwnedMessage};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::Message;
-use utils::{get_hostname, get_new_uuid_v4, init_logger};
+use utils::{get_hostname, init_logger};
+
+pub type AnyResult<T> = Result<T, Box<dyn std::error::Error>>;
 
 const BOOTSTRAP_SERVERS: &str = "bootstrap.servers";
 const GROUP_ID: &str = "group.id";
@@ -29,51 +31,29 @@ const HEARTBEAT_INTERVAL_MS: &str = "heartbeat.interval.ms";
 const SESSION_TIMEOUT_MS: &str = "session.timeout.ms";
 const ENABLE_AUTO_COMMIT: &str = "enable.auto.commit";
 
-fn create_event_producer(kafka_config: &KafkaConfig) -> IOResult<FutureProducer> {
-    let producer_creation_result: KafkaResult<FutureProducer> = ClientConfig::new()
+fn create_event_producer(kafka_config: &KafkaConfig) -> AnyResult<FutureProducer> {
+    ClientConfig::new()
         .set(BOOTSTRAP_SERVERS, &kafka_config.kafka_brokers)
         .set(MESSAGE_TIMEOUT_MS, &kafka_config.kafka_produce_timeout_ms.to_string())
         .set(HEARTBEAT_INTERVAL_MS, &kafka_config.kafka_heartbeat_interval_ms.to_string())
-        .create();
-
-    match producer_creation_result {
-        Err(kafka_error) => Err(IOError::new(
-            IOErrorKind::Other,
-            format!("Kafka Error! {}", kafka_error.to_string()),
-        )),
-        Ok(producer) => Ok(producer),
-    }
+        .create()
+        .map_err(|x| x.into())
 }
 
-fn create_event_consumer(kafka_config: &KafkaConfig) -> IOResult<StreamConsumer> {
-    let consumer_creation_result: KafkaResult<StreamConsumer> = ClientConfig::new()
+fn create_event_consumer(kafka_config: &KafkaConfig) -> AnyResult<StreamConsumer> {
+    let consumer: StreamConsumer = ClientConfig::new()
         .set(GROUP_ID, &kafka_config.kafka_consumer_group_id)
         .set(BOOTSTRAP_SERVERS, &kafka_config.kafka_brokers)
         .set(SESSION_TIMEOUT_MS, &kafka_config.kafka_session_timeout_ms.to_string())
         .set(HEARTBEAT_INTERVAL_MS, &kafka_config.kafka_heartbeat_interval_ms.to_string())
         .set(ENABLE_AUTO_COMMIT, "false")
-        .create();
-
-    if let Err(kafka_error) = consumer_creation_result {
-        return Err(IOError::new(
-            IOErrorKind::Other,
-            format!("Kafka Error! {}", kafka_error.to_string()),
-        ));
-    }
-
-    let consumer = consumer_creation_result.unwrap();
-
-    if let Err(consume_error) = consumer.subscribe(&[&kafka_config.kafka_topic_draft]) {
-        return Err(IOError::new(
-            IOErrorKind::Other,
-            format!("Kafka Consume Error! {}", consume_error.to_string()),
-        ));
-    }
+        .create()?;
+    consumer.subscribe(&[&kafka_config.kafka_topic_draft])?;
 
     Ok(consumer)
 }
 
-async fn mailer_event_loop(runtime_config: MailerConfig) -> IOResult<()> {
+async fn mailer_event_loop(runtime_config: MailerConfig) -> AnyResult<()> {
     let kafka_producer = create_event_producer(&runtime_config.kafka_config)?;
     let kafka_consumer = create_event_consumer(&runtime_config.kafka_config)?;
 
@@ -81,7 +61,7 @@ async fn mailer_event_loop(runtime_config: MailerConfig) -> IOResult<()> {
 }
 
 #[tokio::main]
-async fn main() -> IOResult<()> {
+async fn main() -> AnyResult<()> {
     init_logger();
 
     let runtime_config = MailerConfig::load_from_env()?;

@@ -1,7 +1,7 @@
 MAKEFLAGS	+= --silent
 PROGRAM		:= tapa-micro-mailer
 
-.PHONY : clean clippy fmt upgrade test release docker all
+.PHONY : clean clippy fmt upgrade test release docker run all
 
 all: | prepare debug
 
@@ -24,6 +24,9 @@ upgrade:
 
 fmt:
 	cargo fmt
+
+run:
+	set -a; . ./local.env; set +a | cargo run
 
 clean:
 	rm -rf target
