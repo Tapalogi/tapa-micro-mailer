@@ -1,6 +1,9 @@
 use super::{debug, IOError, IOErrorKind, IOResult};
+use crate::utils::get_hostname;
+use secstr::SecStr;
 use std::env::var;
 
+#[derive(Debug)]
 pub struct KafkaConfig {
     pub kafka_brokers: String,
     pub kafka_consumer_group_id: String,
@@ -90,11 +93,12 @@ impl KafkaConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct SmtpConfig {
     pub use_starttls: bool,
     pub host: String,
     pub user: String,
-    pub pass: String,
+    pub pass: SecStr,
     pub max_per_second: Option<usize>,
     pub max_per_minute: Option<usize>,
     pub max_per_hour: Option<usize>,
@@ -125,7 +129,7 @@ impl SmtpConfig {
         }
 
         if let Ok(smtp_pass) = var("SMTP_PASS") {
-            pass = smtp_pass;
+            pass = SecStr::from(smtp_pass);
         } else {
             return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_PASS not set!"));
         }
@@ -178,16 +182,25 @@ impl SmtpConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct MailerConfig {
     pub kafka_config: KafkaConfig,
     pub smtp_config: SmtpConfig,
+    pub instance_name: String,
 }
 
 impl MailerConfig {
     pub fn load_from_env() -> IOResult<Self> {
         let kafka_config = KafkaConfig::load_from_env()?;
         let smtp_config = SmtpConfig::load_from_env()?;
+        let instance_name;
 
-        Ok(Self { kafka_config, smtp_config })
+        if let Ok(mailer_instance_name) = var("MAILER_INSTANCE_NAME") {
+            instance_name = format!("{}_{}", mailer_instance_name, get_hostname());
+        } else {
+            return Err(IOError::new(IOErrorKind::InvalidData, "MAILER_INSTANCE_NAME not set!"));
+        }
+
+        Ok(Self { instance_name, kafka_config, smtp_config })
     }
 }

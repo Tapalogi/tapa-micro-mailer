@@ -73,12 +73,10 @@ fn create_event_consumer(kafka_config: &KafkaConfig) -> IOResult<StreamConsumer>
     Ok(consumer)
 }
 
-async fn mailer_event_loop(
-    runtime_config: MailerConfig,
-    service_hostname: String,
-    kafka_producer: FutureProducer,
-    kafka_consumer: StreamConsumer,
-) -> IOResult<()> {
+async fn mailer_event_loop(runtime_config: MailerConfig) -> IOResult<()> {
+    let kafka_producer = create_event_producer(&runtime_config.kafka_config)?;
+    let kafka_consumer = create_event_consumer(&runtime_config.kafka_config)?;
+
     todo!("Implement mailer business logic!");
 }
 
@@ -87,9 +85,7 @@ async fn main() -> IOResult<()> {
     init_logger();
 
     let runtime_config = MailerConfig::load_from_env()?;
-    let service_hostname = get_hostname();
-    let kafka_producer = create_event_producer(&runtime_config.kafka_config)?;
-    let kafka_consumer = create_event_consumer(&runtime_config.kafka_config)?;
+    info!("Runtime Config: {:#?}", runtime_config);
 
-    mailer_event_loop(runtime_config, service_hostname, kafka_producer, kafka_consumer).await
+    mailer_event_loop(runtime_config).await
 }

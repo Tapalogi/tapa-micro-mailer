@@ -31,7 +31,7 @@ pub struct Mailer {
 
 impl Mailer {
     pub fn new(smtp_config: SmtpConfig) -> IOResult<Self> {
-        let creds = Credentials::new(smtp_config.user.clone(), smtp_config.pass.clone());
+        let creds = Credentials::new(smtp_config.user.clone(), smtp_config.pass.to_string());
         let mailer_build_result = if smtp_config.use_starttls {
             AsyncSmtpTransport::<Tokio02Connector>::starttls_relay(&smtp_config.host)
         } else {
