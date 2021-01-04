@@ -25,5 +25,5 @@ pub fn init_logger() {
         set_var(RUST_LOG, "info");
     }
 
-    log_builder().default_format().format_timestamp_nanos().format_indent(Some(2)).init();
+    log_builder().default_format().format_timestamp_nanos().format_indent(None).init();
 }

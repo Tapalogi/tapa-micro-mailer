@@ -65,7 +65,7 @@ async fn main() -> AnyResult<()> {
     init_logger();
 
     let runtime_config = MailerConfig::load_from_env()?;
-    info!("Runtime Config: {:#?}", runtime_config);
+    info!("Runtime Config:\n{:#?}", runtime_config);
 
     mailer_event_loop(runtime_config).await
 }

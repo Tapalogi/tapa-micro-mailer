@@ -1,7 +1,7 @@
 MAKEFLAGS	+= --silent
 PROGRAM		:= tapa-micro-mailer
 
-.PHONY : clean clippy fmt upgrade test release docker run all
+.PHONY : clean clippy fmt upgrade test release docker run run-with-kafka all
 
 all: | prepare debug
 
@@ -24,6 +24,9 @@ upgrade:
 
 fmt:
 	cargo fmt
+
+run-with-kafka:
+	docker-compose -f kafka-local.docker-compose.yml up -d && set -a; . ./local.env; set +a | cargo run
 
 run:
 	set -a; . ./local.env; set +a | cargo run
