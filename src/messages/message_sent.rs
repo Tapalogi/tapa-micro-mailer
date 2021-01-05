@@ -13,12 +13,7 @@ pub struct MessageSent {
 
 impl MessageSent {
     pub fn new(origin_offset: i64, service_instance_name: String, draft_id: Uuid) -> Self {
-        Self {
-            origin_offset,
-            draft_id,
-            service_instance_name: service_instance_name.into(),
-            timestamp: Utc::now().into(),
-        }
+        Self { origin_offset, draft_id, service_instance_name, timestamp: Utc::now().into() }
     }
 }
 
