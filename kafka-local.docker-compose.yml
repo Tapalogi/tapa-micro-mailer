@@ -10,7 +10,7 @@ services:
       - "127.0.0.1:9092:9092"
     environment:
       KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
-      KAFKA_CREATE_TOPICS: "MAILER:DRAFT,MAILER:SENT,MAILER:FAIL"
+      KAFKA_CREATE_TOPICS: "mailer.draft:1:1:compact,mailer.sent:1:1:compact,mailer.fail:1:1:compact"
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
