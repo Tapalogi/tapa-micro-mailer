@@ -1,5 +1,3 @@
-use std::thread::current;
-
 use tokio::time::{Duration, Instant};
 
 pub struct ResettableBucket {

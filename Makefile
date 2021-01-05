@@ -1,7 +1,7 @@
 MAKEFLAGS	+= --silent
 PROGRAM		:= tapa-micro-mailer
 
-.PHONY : clean clippy fmt upgrade test release docker run run-with-kafka all
+.PHONY : all test prepare check clippy upgrade fmt run-with-kafka run clean debug release docker
 
 all: | prepare debug
 

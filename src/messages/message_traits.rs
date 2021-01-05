@@ -5,6 +5,10 @@ pub trait IJsonSerializable<T = Self>
 where
     Self: DeserializeOwned + Serialize + Clone + Send + Sized,
 {
+    fn from_slice(json_slice: &[u8]) -> Option<Self> {
+        serde_json::from_slice::<Self>(json_slice).ok()
+    }
+
     fn from_json(json_string: &str) -> Option<Self> {
         serde_json::from_str::<Self>(json_string).ok()
     }

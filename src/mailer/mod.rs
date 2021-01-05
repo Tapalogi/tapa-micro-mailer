@@ -2,8 +2,10 @@ mod resettable_bucket;
 
 use crate::config::SmtpConfig;
 use crate::messages::{
-    MessageDraft, MessageDraftBodyType, MessageFail, MessageFailType, MessageSent,
+    IJsonSerializable, MessageDraft, MessageDraftBodyType, MessageFail, MessageFailType,
+    MessageSent,
 };
+use crate::utils::{DAY_IN_SECONDS, HOUR_IN_SECONDS, MINUTE_IN_SECONDS};
 use crate::{IOError, IOErrorKind, IOResult};
 use lettre::message::header::ContentType;
 use lettre::message::{Mailbox, SinglePart};
@@ -11,10 +13,6 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Address, AsyncSmtpTransport, Message as Email, Tokio02Connector, Tokio02Transport};
 use resettable_bucket::ResettableBucket;
 use tokio::time::{Duration, Instant};
-
-pub(crate) const MINUTE_IN_SECONDS: u64 = 60;
-pub(crate) const HOUR_IN_SECONDS: u64 = 60 * MINUTE_IN_SECONDS;
-pub(crate) const DAY_IN_SECONDS: u64 = 24 * HOUR_IN_SECONDS;
 
 pub enum EmailSendingResult {
     Fail(MessageFail),
@@ -76,10 +74,19 @@ impl Mailer {
         }
     }
 
-    async fn compose_and_send(&mut self, draft: MessageDraft) -> EmailSendingResult {
+    pub async fn compose_and_send(
+        &mut self,
+        origin_offset: i64,
+        service_instance_name: &str,
+        draft: MessageDraft,
+    ) -> EmailSendingResult {
         let current_instant = Instant::now();
-        let mut message_fail =
-            MessageFail::new(None, None, draft.clone(), MessageFailType::Unknown);
+        let mut message_fail = MessageFail::new(
+            origin_offset,
+            service_instance_name.into(),
+            draft.to_json(),
+            MessageFailType::Unknown,
+        );
 
         if draft.has_empty_body() {
             message_fail.fail_reason = MessageFailType::BadDraft("Empty body!".into());
@@ -195,7 +202,11 @@ impl Mailer {
                 message_fail.fail_reason = MessageFailType::Other(e.to_string());
                 EmailSendingResult::Fail(message_fail)
             }
-            Ok(_) => EmailSendingResult::Sent(MessageSent::new(None, None, draft.id)),
+            Ok(_) => EmailSendingResult::Sent(MessageSent::new(
+                origin_offset,
+                service_instance_name.into(),
+                draft.id,
+            )),
         }
     }
 }

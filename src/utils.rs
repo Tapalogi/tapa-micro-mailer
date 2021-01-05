@@ -2,6 +2,10 @@ use env_logger::builder as log_builder;
 use regex::Regex;
 use std::env::{set_var, var};
 
+pub(crate) const MINUTE_IN_SECONDS: u64 = 60;
+pub(crate) const HOUR_IN_SECONDS: u64 = 60 * MINUTE_IN_SECONDS;
+pub(crate) const DAY_IN_SECONDS: u64 = 24 * HOUR_IN_SECONDS;
+
 const REGEX_VALID_EMAIL: &str =
     r"^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})";
 const RUST_LOG: &str = "RUST_LOG";
