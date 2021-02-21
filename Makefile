@@ -1,7 +1,7 @@
 MAKEFLAGS	+= --silent
 PROGRAM		:= tapa-micro-mailer
 
-.PHONY : all test prepare check clippy upgrade fmt run-with-kafka run clean debug release docker
+.PHONY : all test prepare check clippy upgrade fmt run clean debug release docker
 
 all: | prepare debug
 
@@ -25,9 +25,6 @@ upgrade:
 fmt:
 	cargo fmt
 
-run-with-kafka:
-	docker-compose -f kafka-local.docker-compose.yml up -d && set -a; . ./local.env; set +a | cargo run
-
 run:
 	set -a; . ./local.env; set +a | cargo run
 
@@ -40,7 +37,7 @@ debug: | prepare
 	cp target/debug/${PROGRAM} build/debug/${PROGRAM}
 
 release: | prepare
-	RUSTFLAGS="-C link-args=-s -C target-feature=+crt-static" cargo build --release
+	RUSTFLAGS="-C target-cpu=native -C link-args=-s" cargo build --release
 	cp target/release/${PROGRAM} build/release/${PROGRAM}
 
 docker:

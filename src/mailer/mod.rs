@@ -28,7 +28,7 @@ pub struct Mailer {
 }
 
 impl Mailer {
-    pub fn new(smtp_config: SmtpConfig) -> AnyResult<Self> {
+    pub fn new(smtp_config: &SmtpConfig) -> AnyResult<Self> {
         let creds = Credentials::new(smtp_config.user.clone(), smtp_config.pass.to_string());
         let mailer_build_result = if smtp_config.use_starttls {
             AsyncSmtpTransport::<Tokio02Connector>::starttls_relay(&smtp_config.host)
@@ -76,14 +76,14 @@ impl Mailer {
 
     pub async fn compose_and_send(
         &mut self,
-        origin_offset: i64,
+        origin_offset: Option<i64>,
         service_instance_name: &str,
         draft: MessageDraft,
     ) -> EmailSendingResult {
         let current_instant = Instant::now();
         let mut message_fail = MessageFail::new(
             origin_offset,
-            service_instance_name.into(),
+            service_instance_name,
             draft.to_json_string_pretty(),
             MessageFailType::Unknown,
         );
@@ -204,7 +204,7 @@ impl Mailer {
             }
             Ok(_) => EmailSendingResult::Sent(MessageSent::new(
                 origin_offset,
-                service_instance_name.into(),
+                service_instance_name,
                 draft.id,
             )),
         }

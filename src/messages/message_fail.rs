@@ -17,7 +17,7 @@ pub enum MessageFailType {
 
 #[derive(Deserialize, Serialize, Clone, IJsonSerializable)]
 pub struct MessageFail {
-    pub origin_offset: i64,
+    pub origin_offset: Option<i64>,
     pub service_instance_name: String,
     pub message_copy: String,
     pub fail_reason: MessageFailType,
@@ -26,14 +26,14 @@ pub struct MessageFail {
 
 impl MessageFail {
     pub fn new(
-        origin_offset: i64,
-        service_instance_name: String,
+        origin_offset: Option<i64>,
+        service_instance_name: &str,
         message_copy: String,
         fail_reason: MessageFailType,
     ) -> Self {
         Self {
             origin_offset,
-            service_instance_name,
+            service_instance_name: service_instance_name.into(),
             message_copy,
             fail_reason,
             timestamp: Utc::now().into(),
