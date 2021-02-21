@@ -41,4 +41,4 @@ release: | prepare
 	cp target/release/${PROGRAM} build/release/${PROGRAM}
 
 docker:
-	docker build --pull -t docker.pkg.github.com/tapalogi/tapa-micro-mailer/tmm-local:dev .
+	docker build --pull -t docker.pkg.github.com/tapalogi/tapa-micro-mailer/tapa-micro-mailer:latest .
