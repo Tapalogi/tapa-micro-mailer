@@ -1,2 +1,7 @@
 *
-!build/release
+!.cargo
+!src
+!Cargo.lock
+!Cargo.toml
+!rust-toolchain
+!rustfmt.toml
