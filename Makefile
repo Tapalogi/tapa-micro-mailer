@@ -43,5 +43,5 @@ release: | prepare
 	RUSTFLAGS="-C link-args=-s -C target-feature=+crt-static" cargo build --release
 	cp target/release/${PROGRAM} build/release/${PROGRAM}
 
-docker: | release
+docker:
 	docker build --pull -t docker.pkg.github.com/tapalogi/tapa-micro-mailer/tmm-local:dev .
