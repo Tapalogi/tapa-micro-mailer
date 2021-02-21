@@ -2,16 +2,16 @@ mod resettable_bucket;
 
 use crate::config::SmtpConfig;
 use crate::messages::{
-    IJsonSerializable, MessageDraft, MessageDraftBodyType, MessageFail, MessageFailType,
-    MessageSent,
+    MessageDraft, MessageDraftBodyType, MessageFail, MessageFailType, MessageSent,
 };
 use crate::utils::{DAY_IN_SECONDS, HOUR_IN_SECONDS, MINUTE_IN_SECONDS};
-use crate::{IOError, IOErrorKind, IOResult};
+use crate::{anyerror, AnyResult};
 use lettre::message::header::ContentType;
 use lettre::message::{Mailbox, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Address, AsyncSmtpTransport, Message as Email, Tokio02Connector, Tokio02Transport};
 use resettable_bucket::ResettableBucket;
+use tapa_trait_serde::IJsonSerializable;
 use tokio::time::{Duration, Instant};
 
 pub enum EmailSendingResult {
@@ -28,7 +28,7 @@ pub struct Mailer {
 }
 
 impl Mailer {
-    pub fn new(smtp_config: SmtpConfig) -> IOResult<Self> {
+    pub fn new(smtp_config: SmtpConfig) -> AnyResult<Self> {
         let creds = Credentials::new(smtp_config.user.clone(), smtp_config.pass.to_string());
         let mailer_build_result = if smtp_config.use_starttls {
             AsyncSmtpTransport::<Tokio02Connector>::starttls_relay(&smtp_config.host)
@@ -37,7 +37,7 @@ impl Mailer {
         };
 
         match mailer_build_result {
-            Err(build_error) => Err(IOError::new(IOErrorKind::Other, build_error.to_string())),
+            Err(build_error) => Err(anyerror!(build_error.to_string())),
             Ok(mailer) => {
                 let mut bucket_second = None;
                 let mut bucket_minute = None;
@@ -84,7 +84,7 @@ impl Mailer {
         let mut message_fail = MessageFail::new(
             origin_offset,
             service_instance_name.into(),
-            draft.to_json(),
+            draft.to_json_string_pretty(),
             MessageFailType::Unknown,
         );
 

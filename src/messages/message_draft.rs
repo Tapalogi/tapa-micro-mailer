@@ -1,10 +1,10 @@
-use super::IJsonSerializable;
 use crate::utils::is_valid_email_string;
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
+use tapa_trait_serde::IJsonSerializable;
 use uuid::Uuid;
 
-#[derive(Deserialize, Serialize, Clone, Copy)]
+#[derive(Deserialize, Serialize, Clone, Copy, IJsonSerializable)]
 pub enum MessageDraftBodyType {
     #[serde(rename = "ASCII")]
     Ascii,
@@ -12,7 +12,7 @@ pub enum MessageDraftBodyType {
     Html,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, IJsonSerializable)]
 pub struct MessageDraft {
     pub id: Uuid,
     pub email_to: String,
@@ -42,6 +42,3 @@ impl MessageDraft {
         self.subject.is_empty()
     }
 }
-
-impl IJsonSerializable for MessageDraftBodyType {}
-impl IJsonSerializable for MessageDraft {}

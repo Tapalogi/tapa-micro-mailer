@@ -1,95 +1,56 @@
-use super::{debug, IOError, IOErrorKind, IOResult};
+use super::{anyerror, debug, AnyResult};
 use crate::utils::get_hostname;
 use secstr::SecStr;
 use std::env::var;
 
 #[derive(Debug)]
-pub struct KafkaConfig {
-    pub kafka_brokers: String,
-    pub kafka_consumer_group_id: String,
-    pub kafka_topic_draft: String,
-    pub kafka_topic_fail: String,
-    pub kafka_topic_sent: String,
-    pub kafka_session_timeout_ms: u32,
-    pub kafka_heartbeat_interval_ms: u32,
-    pub kafka_produce_timeout_ms: u32,
+pub struct MQConfig {
+    pub mq_url: String,
+    pub mq_consumer_group: String,
+    pub mq_topic_source: String,
+    pub mq_topic_failure: String,
+    pub mq_topic_success: String,
 }
 
-impl KafkaConfig {
-    pub fn load_from_env() -> IOResult<Self> {
-        let kafka_brokers;
-        let kafka_consumer_group_id;
-        let kafka_topic_draft;
-        let kafka_topic_fail;
-        let kafka_topic_sent;
-        let mut kafka_session_timeout_ms = 5000;
-        let mut kafka_heartbeat_interval_ms = 1000;
-        let mut kafka_produce_timeout_ms = 5000;
+impl MQConfig {
+    pub fn load_from_env() -> AnyResult<Self> {
+        let mq_url;
+        let mq_consumer_group;
+        let mq_topic_source;
+        let mq_topic_failure;
+        let mq_topic_success;
 
-        if let Ok(brokers) = var("KAFKA_BROKERS") {
-            kafka_brokers = brokers;
+        if let Ok(brokers) = var("MQ_URL") {
+            mq_url = brokers;
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "KAFKA_BROKERS not set!"));
+            return Err(anyerror!("MQ_URL not set!"));
         }
 
-        if let Ok(consumer_group_id) = var("KAFKA_CONSUMER_GROUP_ID") {
-            kafka_consumer_group_id = consumer_group_id;
+        if let Ok(consumer_group_id) = var("MQ_CONSUMER_GROUP") {
+            mq_consumer_group = consumer_group_id;
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "KAFKA_CONSUMER_GROUP_ID not set!"));
+            return Err(anyerror!("MQ_CONSUMER_GROUP not set!"));
         }
 
-        if let Ok(topic_draft) = var("KAFKA_TOPIC_DRAFT") {
-            kafka_topic_draft = topic_draft;
+        if let Ok(topic_draft) = var("MQ_TOPIC_SOURCE") {
+            mq_topic_source = topic_draft;
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "KAFKA_TOPIC_DRAFT not set!"));
+            return Err(anyerror!("MQ_TOPIC_SOURCE not set!"));
         }
 
-        if let Ok(topic_fail) = var("KAFKA_TOPIC_FAIL") {
-            kafka_topic_fail = topic_fail;
+        if let Ok(topic_fail) = var("MQ_TOPIC_FAILURE") {
+            mq_topic_failure = topic_fail;
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "KAFKA_TOPIC_FAIL not set!"));
+            return Err(anyerror!("MQ_TOPIC_FAILURE not set!"));
         }
 
-        if let Ok(topic_sent) = var("KAFKA_TOPIC_SENT") {
-            kafka_topic_sent = topic_sent;
+        if let Ok(topic_sent) = var("MQ_TOPIC_SUCCESS") {
+            mq_topic_success = topic_sent;
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "KAFKA_TOPIC_SENT not set!"));
+            return Err(anyerror!("MQ_TOPIC_SUCCESS not set!"));
         }
 
-        if let Ok(session_timeout_ms) = var("KAFKA_SESSION_TIMEOUT_MS") {
-            if let Ok(parsed_session_timeout_ms) = session_timeout_ms.parse::<u32>() {
-                kafka_session_timeout_ms = parsed_session_timeout_ms;
-                debug!("KAFKA_SESSION_TIMEOUT_MS overridden with {}", parsed_session_timeout_ms);
-            }
-        }
-
-        if let Ok(heartbeat_interval_ms) = var("KAFKA_HEARTBEAT_INTERVAL_MS") {
-            if let Ok(parsed_heartbeat_interval_ms) = heartbeat_interval_ms.parse::<u32>() {
-                kafka_heartbeat_interval_ms = parsed_heartbeat_interval_ms;
-                debug!(
-                    "KAFKA_HEARTBEAT_INTERVAL_MS overridden with {}",
-                    parsed_heartbeat_interval_ms
-                );
-            }
-        }
-
-        if let Ok(produce_timeout_ms) = var("KAFKA_PRODUCE_TIMEOUT_MS") {
-            if let Ok(parsed_produce_timeout_ms) = produce_timeout_ms.parse::<u32>() {
-                kafka_produce_timeout_ms = parsed_produce_timeout_ms;
-                debug!("KAFKA_PRODUCE_TIMEOUT_MS overridden with {}", parsed_produce_timeout_ms);
-            }
-        }
-
-        Ok(Self {
-            kafka_brokers,
-            kafka_consumer_group_id,
-            kafka_topic_draft,
-            kafka_topic_fail,
-            kafka_topic_sent,
-            kafka_session_timeout_ms,
-            kafka_heartbeat_interval_ms,
-            kafka_produce_timeout_ms,
-        })
+        Ok(Self { mq_url, mq_consumer_group, mq_topic_source, mq_topic_failure, mq_topic_success })
     }
 }
 
@@ -106,7 +67,7 @@ pub struct SmtpConfig {
 }
 
 impl SmtpConfig {
-    pub fn load_from_env() -> IOResult<Self> {
+    pub fn load_from_env() -> AnyResult<Self> {
         let host;
         let user;
         let pass;
@@ -119,19 +80,19 @@ impl SmtpConfig {
         if let Ok(smtp_host) = var("SMTP_HOST") {
             host = smtp_host;
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_HOST not set!"));
+            return Err(anyerror!("SMTP_HOST not set!"));
         }
 
         if let Ok(smtp_user) = var("SMTP_USER") {
             user = smtp_user;
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_USER not set!"));
+            return Err(anyerror!("SMTP_USER not set!"));
         }
 
         if let Ok(smtp_pass) = var("SMTP_PASS") {
             pass = SecStr::from(smtp_pass);
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "SMTP_PASS not set!"));
+            return Err(anyerror!("SMTP_PASS not set!"));
         }
 
         if let Ok(smtp_use_starttls) = var("SMTP_USE_STARTTLS") {
@@ -184,23 +145,23 @@ impl SmtpConfig {
 
 #[derive(Debug)]
 pub struct MailerConfig {
-    pub kafka_config: KafkaConfig,
+    pub mq_config: MQConfig,
     pub smtp_config: SmtpConfig,
     pub instance_name: String,
 }
 
 impl MailerConfig {
-    pub fn load_from_env() -> IOResult<Self> {
-        let kafka_config = KafkaConfig::load_from_env()?;
+    pub fn load_from_env() -> AnyResult<Self> {
+        let mq_config = MQConfig::load_from_env()?;
         let smtp_config = SmtpConfig::load_from_env()?;
         let instance_name;
 
         if let Ok(mailer_instance_name) = var("MAILER_INSTANCE_NAME") {
             instance_name = format!("{}_{}", mailer_instance_name, get_hostname());
         } else {
-            return Err(IOError::new(IOErrorKind::InvalidData, "MAILER_INSTANCE_NAME not set!"));
+            return Err(anyerror!("MAILER_INSTANCE_NAME not set!"));
         }
 
-        Ok(Self { instance_name, kafka_config, smtp_config })
+        Ok(Self { instance_name, mq_config, smtp_config })
     }
 }

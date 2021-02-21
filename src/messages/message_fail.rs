@@ -1,9 +1,9 @@
-use super::IJsonSerializable;
 use chrono::{DateTime, FixedOffset, Utc};
 use serde::{Deserialize, Serialize};
+use tapa_trait_serde::IJsonSerializable;
 use tokio::time::Duration;
 
-#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, IJsonSerializable)]
 pub enum MessageFailType {
     #[serde(rename = "OTHER")]
     Other(String),
@@ -15,7 +15,7 @@ pub enum MessageFailType {
     Unknown, // This kind of error should not exist
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, IJsonSerializable)]
 pub struct MessageFail {
     pub origin_offset: i64,
     pub service_instance_name: String,
@@ -40,6 +40,3 @@ impl MessageFail {
         }
     }
 }
-
-impl IJsonSerializable for MessageFailType {}
-impl IJsonSerializable for MessageFail {}
