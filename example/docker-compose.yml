@@ -1,0 +1,19 @@
+version: "3.3"
+
+services:
+  nats:
+    image: nats:2.1-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
+  mailer:
+    build: .
+    links:
+      - "nats"
+    image: docker.pkg.github.com/tapalogi/tapa-micro-mailer/tapa-micro-mailer:0.1.0-beta.0
+    restart: unless-stopped
+    env_file:
+      - "local.env"
+    depends_on:
+      - "nats"

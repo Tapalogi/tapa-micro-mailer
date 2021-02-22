@@ -12,12 +12,13 @@ use mailer::{EmailSendingResult, Mailer};
 use messages::{MessageDraft, MessageFail, MessageFailType};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
 use tapa_cgloop_nats::{CGLoop, NatsMessage, NatsMessageHandler, NatsOptions, ProcessResult};
 use tapa_trait_serde::IJsonSerializable;
 use tokio::runtime::Runtime;
-use tokio::time::{delay_for, Duration};
 use tokio::{join as wait_for_all, main as async_main};
-use utils::{init_logger, wait_for_stop_signals, MINUTE_IN_SECONDS};
+use utils::{init_logger, wait_for_stop_signals};
 
 fn create_nats_options(instance_name: &str) -> NatsOptions {
     NatsOptions::new().max_reconnects(None).with_name(instance_name)
@@ -43,40 +44,41 @@ struct DraftEmailConsumer {
 
 impl NatsMessageHandler for DraftEmailConsumer {
     fn handle_message(&mut self, message: &NatsMessage) -> AnyResult<ProcessResult> {
-        let one_minute = Duration::from_secs(MINUTE_IN_SECONDS);
+        let ten_seconds = Duration::from_secs(10);
         let service_instance_name = &self.config.instance_name;
 
         if let Ok(message_draft) = MessageDraft::from_json_bytes(&message.data[..]) {
             debug!("Got new message draft: {}", message_draft.to_json_string_pretty());
 
-            match self.async_runtime.block_on(self.mailer.compose_and_send(
-                None,
-                service_instance_name,
-                message_draft,
-            )) {
-                EmailSendingResult::Fail(message_fail) => match &message_fail.fail_reason {
-                    MessageFailType::Unknown => {
-                        Err(anyerror!("MessageFailType::Unknown should never occur!"))
-                    }
-                    MessageFailType::QuotaExhausted(duration_to_wait, error_string) => {
-                        warn!("{}", error_string);
-                        let message_fail = Bytes::from(message_fail.to_json_bytes_pretty());
-                        self.async_runtime.block_on(delay_for(*duration_to_wait));
+            loop {
+                let retry_draft = message_draft.clone();
 
-                        Ok(ProcessResult::Failure(message_fail))
-                    }
-                    MessageFailType::Other(reason) | MessageFailType::BadDraft(reason) => {
-                        error!("{}", reason);
-                        let message_fail = Bytes::from(message_fail.to_json_bytes_pretty());
-                        self.async_runtime.block_on(delay_for(one_minute));
+                match self.async_runtime.block_on(self.mailer.compose_and_send(
+                    None,
+                    service_instance_name,
+                    retry_draft,
+                )) {
+                    EmailSendingResult::Fail(message_fail) => match &message_fail.fail_reason {
+                        MessageFailType::Unknown => {
+                            return Err(anyerror!("MessageFailType::Unknown should never occur!"));
+                        }
+                        MessageFailType::QuotaExhausted(duration_to_wait, error_string) => {
+                            warn!("{}", error_string);
+                            sleep(*duration_to_wait);
+                            continue;
+                        }
+                        MessageFailType::Other(reason) | MessageFailType::BadDraft(reason) => {
+                            error!("{}", reason);
+                            let message_fail = Bytes::from(message_fail.to_json_bytes_pretty());
+                            sleep(ten_seconds);
+                            return Ok(ProcessResult::Failure(message_fail));
+                        }
+                    },
+                    EmailSendingResult::Sent(message_success) => {
+                        let message_success = Bytes::from(message_success.to_json_bytes_pretty());
 
-                        Ok(ProcessResult::Failure(message_fail))
+                        return Ok(ProcessResult::Success(message_success));
                     }
-                },
-                EmailSendingResult::Sent(message_success) => {
-                    let message_success = Bytes::from(message_success.to_json_bytes_pretty());
-
-                    Ok(ProcessResult::Success(message_success))
                 }
             }
         } else {

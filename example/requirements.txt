@@ -1,0 +1,3 @@
+wheel
+asyncio
+asyncio-nats-client

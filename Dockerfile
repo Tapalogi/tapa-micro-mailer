@@ -12,7 +12,9 @@ COPY . .
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     libzstd-dev libsass-dev make cmake \
-    ninja-build yasm nasm libsasl2-dev
+    ninja-build yasm nasm libsasl2-dev \
+    ca-certificates && \
+    update-ca-certificates
 
 ## Package Caching
 RUN cargo fetch
@@ -26,6 +28,12 @@ RUN RUSTFLAGS="-C link-args=-s" cargo build --release
 
 FROM debian:buster-slim
 LABEL maintainer="Aditya Kresna <kresna@tapalogi.com>"
+
+## Additional System Packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates tzdata && \
+    update-ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /app
 WORKDIR /app
