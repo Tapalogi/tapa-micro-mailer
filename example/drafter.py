@@ -19,9 +19,9 @@ async def run(loop):
         current_time = time_ns()
         pending_email = {
             "id": str(uuid4()),
-            "email_to": "admin@tapalogi.com",
+            "email_to": "admin@example.com",
             "email_to_name": "Tapalogi Administrator",
-            "email_from": "noreply@tapalogi.com",
+            "email_from": "noreply@example.com",
             "email_from_name": "Tapalogi System",
             "subject": f"Tapa Micro Mailer - Test #{current_time}",
             "body_type": "ASCII",
