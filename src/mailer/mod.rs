@@ -9,6 +9,7 @@ use crate::{anyerror, AnyResult};
 use lettre::message::header::ContentType;
 use lettre::message::{Mailbox, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
+use lettre::transport::smtp::authentication::Mechanism;
 use lettre::{Address, AsyncSmtpTransport, Message as Email, Tokio02Connector, Tokio02Transport};
 use resettable_bucket::ResettableBucket;
 use tapa_trait_serde::IJsonSerializable;
@@ -29,7 +30,8 @@ pub struct Mailer {
 
 impl Mailer {
     pub fn new(smtp_config: &SmtpConfig) -> AnyResult<Self> {
-        let creds = Credentials::new(smtp_config.user.clone(), smtp_config.pass.to_string());
+        let creds =
+            Credentials::new(smtp_config.user.clone(), smtp_config.pass.unsecure().to_string());
         let mailer_build_result = if smtp_config.use_starttls {
             AsyncSmtpTransport::<Tokio02Connector>::starttls_relay(&smtp_config.host)
         } else {
@@ -68,7 +70,11 @@ impl Mailer {
                     bucket_hour,
                     bucket_minute,
                     bucket_second,
-                    transport: mailer.credentials(creds).build(),
+                    transport: mailer
+                        .credentials(creds)
+                        .authentication(vec![Mechanism::Login])
+                        .port(587)
+                        .build(),
                 })
             }
         }

@@ -1,6 +1,6 @@
 use super::{anyerror, debug, AnyResult};
 use crate::utils::get_hostname;
-use secstr::SecStr;
+use secstr::SecUtf8;
 use std::env::var;
 
 #[derive(Debug)]
@@ -59,7 +59,7 @@ pub struct SmtpConfig {
     pub use_starttls: bool,
     pub host: String,
     pub user: String,
-    pub pass: SecStr,
+    pub pass: SecUtf8,
     pub max_per_second: Option<usize>,
     pub max_per_minute: Option<usize>,
     pub max_per_hour: Option<usize>,
@@ -90,7 +90,7 @@ impl SmtpConfig {
         }
 
         if let Ok(smtp_pass) = var("SMTP_PASS") {
-            pass = SecStr::from(smtp_pass);
+            pass = SecUtf8::from(smtp_pass);
         } else {
             return Err(anyerror!("SMTP_PASS not set!"));
         }

@@ -6,7 +6,6 @@ mod utils;
 pub use log::{debug, error, info, log, warn};
 
 use anyhow::{anyhow as anyerror, Result as AnyResult};
-use async_trait::async_trait;
 use bytes::Bytes;
 use config::{MQConfig, MailerConfig};
 use mailer::{EmailSendingResult, Mailer};
@@ -15,6 +14,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tapa_cgloop_nats::{CGLoop, NatsMessage, NatsMessageHandler, NatsOptions, ProcessResult};
 use tapa_trait_serde::IJsonSerializable;
+use tokio::runtime::Runtime;
 use tokio::time::{delay_for, Duration};
 use tokio::{join as wait_for_all, main as async_main};
 use utils::{init_logger, wait_for_stop_signals, MINUTE_IN_SECONDS};
@@ -31,22 +31,29 @@ fn create_cg_loop(mq_config: &MQConfig) -> CGLoop {
         &mq_config.mq_topic_failure,
         &mq_config.mq_consumer_group,
         false,
+        Some(Duration::from_secs(1)),
     )
 }
 
 struct DraftEmailConsumer {
     mailer: Mailer,
     config: MailerConfig,
+    async_runtime: Runtime,
 }
 
-#[async_trait]
 impl NatsMessageHandler for DraftEmailConsumer {
-    async fn handle_message<'a>(&mut self, message: &'a NatsMessage) -> AnyResult<ProcessResult> {
+    fn handle_message(&mut self, message: &NatsMessage) -> AnyResult<ProcessResult> {
         let one_minute = Duration::from_secs(MINUTE_IN_SECONDS);
         let service_instance_name = &self.config.instance_name;
 
         if let Ok(message_draft) = MessageDraft::from_json_bytes(&message.data[..]) {
-            match self.mailer.compose_and_send(None, service_instance_name, message_draft).await {
+            debug!("Got new message draft: {}", message_draft.to_json_string_pretty());
+
+            match self.async_runtime.block_on(self.mailer.compose_and_send(
+                None,
+                service_instance_name,
+                message_draft,
+            )) {
                 EmailSendingResult::Fail(message_fail) => match &message_fail.fail_reason {
                     MessageFailType::Unknown => {
                         Err(anyerror!("MessageFailType::Unknown should never occur!"))
@@ -54,14 +61,14 @@ impl NatsMessageHandler for DraftEmailConsumer {
                     MessageFailType::QuotaExhausted(duration_to_wait, error_string) => {
                         warn!("{}", error_string);
                         let message_fail = Bytes::from(message_fail.to_json_bytes_pretty());
-                        delay_for(*duration_to_wait).await;
+                        self.async_runtime.block_on(delay_for(*duration_to_wait));
 
                         Ok(ProcessResult::Failure(message_fail))
                     }
                     MessageFailType::Other(reason) | MessageFailType::BadDraft(reason) => {
                         error!("{}", reason);
                         let message_fail = Bytes::from(message_fail.to_json_bytes_pretty());
-                        delay_for(one_minute).await;
+                        self.async_runtime.block_on(delay_for(one_minute));
 
                         Ok(ProcessResult::Failure(message_fail))
                     }
@@ -77,6 +84,7 @@ impl NatsMessageHandler for DraftEmailConsumer {
                 "Cannot parse to correct JSON format, draft message length is {}",
                 message.data.len()
             );
+            error!("{}", error_message);
             let message_fail = MessageFail::new(
                 None,
                 service_instance_name,
@@ -96,16 +104,19 @@ async fn run_mailer(config: MailerConfig) -> AnyResult<()> {
     let cg_loop = create_cg_loop(&config.mq_config);
     let nats_options = create_nats_options(&config.instance_name);
     let mailer = Mailer::new(&config.smtp_config)?;
-    let mut message_handler = DraftEmailConsumer { config, mailer };
+    let message_handler =
+        Box::new(DraftEmailConsumer { config, mailer, async_runtime: Runtime::new()? });
 
-    let _ = wait_for_all! {
+    let results = wait_for_all! {
         async move {
-            cg_loop.run(nats_options, shutdown_flag_clone, &mut message_handler).await
+            cg_loop.run(nats_options, shutdown_flag_clone, message_handler).await
         },
         async move {
             wait_for_stop_signals(shutdown_flag).await
         }
     };
+
+    results.0.unwrap();
 
     Ok(())
 }
