@@ -1,0 +1,6 @@
+[project]
+name = "tapalogi-tapa-micro-mailer"
+slug = "tapalogi-tapa-micro-mailer"
+
+[amem]
+server = "https://amem.flusci.org"
